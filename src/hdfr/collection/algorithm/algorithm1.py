@@ -14,10 +14,12 @@ import json
 import logging
 import re
 import time
+from collections import deque
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urldefrag, urljoin, urlparse, urlunparse
 
 import requests
 
@@ -39,6 +41,20 @@ MAX_WARC_RECORD_BYTES = 100_000_000
 USER_AGENT = "PAHDFR-Historical-Artifact-Collector/1.1"
 
 logger = logging.getLogger(__name__)
+
+
+class _LinkExtractor(HTMLParser):
+    """Collect anchor destinations from an HTML page."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.casefold() == "a":
+            href = dict(attrs).get("href")
+            if href:
+                self.links.append(href)
 
 
 def get_current_time() -> str:
@@ -101,6 +117,7 @@ class HistoricalArtifactCollector:
         self.session.headers.update({"User-Agent": USER_AGENT})
         self.errors: list[dict[str, Any]] = []
         self.storage = ArtifactStorage(database_path)
+        self._common_crawl_indexes_cache: dict[str, list[str]] = {}
 
     def record_error(
         self,
@@ -187,6 +204,118 @@ class HistoricalArtifactCollector:
 
     # ----------------------- Wayback discovery -----------------------
 
+    def discover_internal_links(
+        self,
+        start_url: str,
+        *,
+        max_pages: int = 25,
+        max_depth: int = 2,
+        delay_seconds: float = 0.5,
+    ) -> list[str]:
+        """Crawl a bounded set of same-host HTML pages to discover URLs.
+
+        The live pages are used only to discover links. Their contents are not
+        stored as artifacts; each returned URL is searched in the selected web
+        archives by the caller.
+        """
+        if max_pages < 1:
+            raise ValueError("max_pages must be at least 1")
+        if max_depth < 0:
+            raise ValueError("max_depth cannot be negative")
+
+        start_url = validate_url(start_url)
+        start_parts = urlparse(start_url)
+        root_host = (start_parts.hostname or "").casefold()
+        root_port = start_parts.port
+
+        def canonicalize(candidate: str) -> str | None:
+            candidate, _fragment = urldefrag(candidate.strip())
+            parsed = urlparse(candidate)
+            if parsed.scheme.casefold() not in {"http", "https"}:
+                return None
+            if (parsed.hostname or "").casefold() != root_host or parsed.port != root_port:
+                return None
+            # Discard credentials and normalize the host while keeping paths
+            # and query strings, which can identify different public pages.
+            host = root_host
+            if root_port is not None:
+                host = f"{host}:{root_port}"
+            return urlunparse((parsed.scheme.casefold(), host, parsed.path or "/", "", parsed.query, ""))
+
+        start_url = canonicalize(start_url) or start_url
+        queue = deque([(start_url, 0)])
+        scheduled = {start_url}
+        discovered: list[str] = []
+
+        robots_url = f"{start_parts.scheme}://{start_parts.netloc}/robots.txt"
+        robots_lines: list[str] = []
+        crawl_timeout = min(self.timeout, 10)
+        try:
+            robots_response = self.session.get(robots_url, timeout=crawl_timeout)
+            if robots_response.status_code == 404:
+                robots_lines = []
+            elif robots_response.ok:
+                robots_lines = robots_response.text.splitlines()
+            else:
+                self.record_error(
+                    "crawler", "robots", f"robots.txt returned HTTP {robots_response.status_code}; "
+                    "link crawl skipped", robots_url,
+                )
+                return [start_url]
+        except requests.RequestException as exc:
+            self.record_error("crawler", "robots", f"Could not read robots.txt: {exc}", robots_url)
+            return [start_url]
+
+        from urllib.robotparser import RobotFileParser
+
+        robots = RobotFileParser()
+        robots.set_url(robots_url)
+        robots.parse(robots_lines)
+        crawl_delay = robots.crawl_delay("*") or delay_seconds
+        crawl_delay = min(max(float(crawl_delay), 0.1), 10.0)
+
+        while queue and len(discovered) < max_pages:
+            current_url, depth = queue.popleft()
+            discovered.append(current_url)
+            if depth >= max_depth:
+                continue
+            if not robots.can_fetch(USER_AGENT, current_url):
+                self.record_error(
+                    "crawler", "robots", "robots.txt disallows crawling this page", current_url,
+                )
+                continue
+
+            try:
+                response = self.session.get(current_url, timeout=crawl_timeout)
+                response.raise_for_status()
+                final = urlparse(response.url)
+                if (final.hostname or "").casefold() != root_host:
+                    self.record_error(
+                        "crawler", "redirect", "Page redirected outside the starting host; skipped",
+                        current_url,
+                    )
+                    continue
+                if "html" not in response.headers.get("Content-Type", "").casefold():
+                    continue
+
+                parser = _LinkExtractor()
+                parser.feed(response.text)
+                for href in parser.links:
+                    candidate = canonicalize(urljoin(response.url, href))
+                    if candidate is None or candidate in scheduled:
+                        continue
+                    if len(scheduled) >= max_pages:
+                        break
+                    scheduled.add(candidate)
+                    queue.append((candidate, depth + 1))
+            except (requests.RequestException, ValueError) as exc:
+                self.record_error("crawler", "link_discovery", str(exc), current_url)
+
+            if queue:
+                time.sleep(crawl_delay)
+
+        return discovered
+
     def discover_wayback(
         self,
         target_url: str,
@@ -248,6 +377,8 @@ class HistoricalArtifactCollector:
 
     def _get_common_crawl_indexes(self, preferred_index: str) -> list[str]:
         """Return preferred index followed by recent indexes from collinfo.json."""
+        if preferred_index in self._common_crawl_indexes_cache:
+            return list(self._common_crawl_indexes_cache[preferred_index])
         indexes = [preferred_index] if preferred_index else []
         try:
             response = self._get_with_retry(
@@ -273,7 +404,9 @@ class HistoricalArtifactCollector:
                     indexes.append(fallback)
 
         # Limit fallback work so an unavailable service does not stall the run.
-        return indexes[:5]
+        indexes = indexes[:5]
+        self._common_crawl_indexes_cache[preferred_index] = indexes
+        return list(indexes)
 
     def discover_common_crawl(
         self,
@@ -492,6 +625,9 @@ class HistoricalArtifactCollector:
         from_date: str | None = None,
         to_date: str | None = None,
         common_crawl_index: str = "CC-MAIN-2025-30",
+        crawl_site: bool = False,
+        max_crawl_pages: int = 25,
+        crawl_depth: int = 2,
     ) -> dict[str, Any]:
         target_url = validate_url(target_url)
         validate_date(from_date, "from_date")
@@ -512,10 +648,19 @@ class HistoricalArtifactCollector:
         discovered: list[dict[str, Any]] = []
         collected: list[dict[str, Any]] = []
 
-        if "wayback" in sources:
-            discovered.extend(self.discover_wayback(target_url, from_date, to_date))
-        if "common_crawl" in sources:
-            discovered.extend(self.discover_common_crawl(target_url, common_crawl_index))
+        target_urls = [target_url]
+        if crawl_site:
+            target_urls = self.discover_internal_links(
+                target_url,
+                max_pages=max_crawl_pages,
+                max_depth=crawl_depth,
+            )
+
+        for page_url in target_urls:
+            if "wayback" in sources:
+                discovered.extend(self.discover_wayback(page_url, from_date, to_date))
+            if "common_crawl" in sources:
+                discovered.extend(self.discover_common_crawl(page_url, common_crawl_index))
 
         # Remove duplicate source/capture/location records before downloading.
         unique_discovered = []
@@ -546,6 +691,9 @@ class HistoricalArtifactCollector:
         result = {
             "algorithm": "Algorithm 1: Historical Artifact Discovery and Collection",
             "target_url": target_url,
+            "crawl_enabled": crawl_site,
+            "crawl_page_count": len(target_urls),
+            "crawl_depth": crawl_depth if crawl_site else 0,
             "started_at": started_at,
             "finished_at": finished_at,
             "discovered_count": len(unique_discovered),

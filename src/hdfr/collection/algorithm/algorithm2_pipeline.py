@@ -25,6 +25,7 @@ from src.hdfr.collection.algorithm.algorithm_2 import (
     Provenance,
     correlate_archived_entities,
 )
+from src.hdfr.collection.algorithm.entity_extraction import extract_entity_candidates
 from src.hdfr.storage import ArtifactStorage
 
 
@@ -99,6 +100,45 @@ class Algorithm2Pipeline:
         parser = VisibleText()
         parser.feed(text)
         return " ".join(" ".join(parser.parts).split())[:max_chars]
+
+    def extract_entity_annotations(
+        self,
+        artifact_ids: Iterable[str],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+        """Extract entity candidates from the selected saved Algorithm 1 HTML."""
+        artifacts = {
+            str(row["artifact_id"]): row for row in self.available_artifacts()
+        }
+        annotations: list[dict[str, Any]] = []
+        errors: list[dict[str, str]] = []
+        for artifact_id in dict.fromkeys(str(value) for value in artifact_ids):
+            artifact = artifacts.get(artifact_id)
+            if artifact is None:
+                errors.append({"artifact_id": artifact_id, "error": "artifact is unavailable"})
+                continue
+            path_value = artifact.get("storage_path")
+            path = Path(path_value) if path_value else None
+            if path is None or not path.is_file():
+                errors.append({"artifact_id": artifact_id, "error": "stored payload is missing"})
+                annotations.append({"artifact_id": artifact_id, "entities": []})
+                continue
+
+            try:
+                raw = path.read_bytes().decode("utf-8", errors="replace")
+                mime_type = str(artifact.get("mime_type") or "").casefold()
+                if "html" not in mime_type:
+                    annotations.append({"artifact_id": artifact_id, "entities": []})
+                    errors.append({
+                        "artifact_id": artifact_id,
+                        "error": f"automatic extraction supports HTML; found {mime_type or 'unknown content type'}",
+                    })
+                    continue
+                entities = extract_entity_candidates(raw, str(artifact.get("source_uri") or ""))
+                annotations.append({"artifact_id": artifact_id, "entities": entities})
+            except (OSError, UnicodeError, ValueError) as exc:
+                annotations.append({"artifact_id": artifact_id, "entities": []})
+                errors.append({"artifact_id": artifact_id, "error": str(exc)})
+        return annotations, errors
 
     @staticmethod
     def _capture_time(value: Any) -> str | None:

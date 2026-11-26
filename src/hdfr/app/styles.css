@@ -81,11 +81,20 @@ div[data-testid="stForm"] {
   margin-inline: auto;
 }
 
-div.stButton > button[kind="primary"] {
+[data-testid="stButton"] button[kind="primary"] {
   background: #111;
   border: 1px solid #111;
-  color: #fff;
+  color: #fff !important;
   border-radius: 7px;
+}
+
+[data-testid="stButton"] button[kind="primary"] p {
+  color: #fff !important;
+  margin: 0;
+}
+
+.st-key-algorithm2_run_button {
+  padding-top: 2.2rem;
 }
 
 [data-testid="stMetric"] {
