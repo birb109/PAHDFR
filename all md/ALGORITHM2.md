@@ -1,5 +1,32 @@
 # Algorithm 2: Temporal-Aware Entity Correlation
 
+## Integration with Algorithm 1
+
+The executable integration is `src/hdfr/collection/algorithm/algorithm2_pipeline.py`. It reads successful artifact records through Algorithm 1's `ArtifactStorage` from the same SQLite file, `data/hdfr.db`, and uses each stored row's artifact ID, source URL, archive URI, capture timestamp, content hash, and storage path as evidence provenance. It does not modify Algorithm 1 or copy its artifacts into a second database.
+
+Algorithm 1 preserves artifacts and provenance; it does not extract entity mentions. Therefore, Algorithm 2 accepts annotations tied to Algorithm 1 artifact IDs. The Streamlit page displays the stored page text for the selected artifact IDs, and the annotations then specify the entities/attributes identified in those pages. Algorithm 2 writes run metadata, observations, pair evidence, clusters, and errors into additional `algorithm2_*` tables in Algorithm 1's existing database.
+
+Annotation input format:
+
+```json
+[
+  {
+    "artifact_id": "<artifact_id from the Algorithm 1 artifacts table>",
+    "entities": [
+      {
+        "entity_type": "organization",
+        "attributes": {"name": "Example Research Group", "domain": "example.org"},
+        "event_time": null,
+        "event_time_end": null,
+        "extraction_confidence": 0.9
+      }
+    ]
+  }
+]
+```
+
+Run the UI from the repository root with `streamlit run src/hdfr/app/app.py`. Run Algorithm 1 first so the shared database contains artifacts, then select those artifacts, annotate the entities shown in their stored content, and run Algorithm 2. A run can be reviewed in the `algorithm2_runs`, `algorithm2_observations`, `algorithm2_pair_evidence`, `algorithm2_cluster_members`, and `algorithm2_errors` tables.
+
 ## Role in the HDFR framework
 
 This algorithm supports **Provenance-Aware Historical Digital Footprint Reconstruction: A Temporal OSINT Framework with Evidence Correlation and Reproducible Evaluation**. It addresses the entity-correlation stage of the proposed workflow: observations extracted from preserved web artifacts are compared and linked into candidate entity histories. Every decision retains evidence and archival provenance so that the result can be inspected and reproduced.

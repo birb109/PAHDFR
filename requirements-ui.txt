@@ -1,2 +1,4 @@
 streamlit>=1.39,<2
 plotly>=5.24,<7
+requests>=2.31,<3
+warcio>=1.7,<2
