@@ -14,8 +14,8 @@ from typing import Any
 
 import streamlit as st
 
-from algorithm_2 import EntityObservation, Provenance, correlate_archived_entities
-from hdfr_system import ArchiveConfig, ArchiveAPIError, HDFRCollectionSystem
+from src.hdfr.collection.algorithm.algorithm_2 import EntityObservation, Provenance, correlate_archived_entities
+from src.hdfr.app.hdfr_system import ArchiveConfig, ArchiveAPIError, HDFRCollectionSystem
 
 
 # Private app configuration. Edit these defaults here, or set the corresponding

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.hdfr.collection.algorithm1 import (
+from src.hdfr.collection.algorithm.algorithm1 import (
     HistoricalArtifactCollector,
     calculate_sha256,
     validate_date,
