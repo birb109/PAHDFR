@@ -1,0 +1,13 @@
+entity_id,canonical_name,entity_type,industry,description
+E001,GreenFuture Foundation,Organization,Environment,Environmental protection organization
+E002,EduBridge Project,Project,Education,Educational support and scholarship project
+E003,HealthConnect,Organization,Healthcare,Public health information organization
+E004,SmartCity Initiative,Project,Technology,Smart urban development project
+E005,OceanGuard,Organization,Environment,Marine environmental protection organization
+E006,FutureSkills,Organization,Education,Professional skills development organization
+E007,AgriTech Solutions,Organization,Agriculture,Agricultural technology organization
+E008,SolarNext,Organization,Energy,Solar energy development organization
+E009,SafeRoad Project,Project,Transportation,Road safety improvement project
+E010,OpenData Lab,Organization,Technology,Open data research organization
+E011,YouthSpark,Organization,Community,Youth development organization
+E012,CleanWater Alliance,Organization,Environment,Clean water access organization

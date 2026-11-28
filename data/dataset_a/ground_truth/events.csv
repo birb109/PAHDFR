@@ -1,0 +1,9 @@
+﻿event_id,entity_id,event_type,event_date,previous_value,new_value,description
+EV_E001_RENAME,E001,rename,2022-03-21T00:00:00Z,GreenFuture Foundation,GreenFuture Foundation International,Organization name changed
+EV_E002_DOMAIN,E002,domain_change,2022-09-17T00:00:00Z,edubridge-project.org,edubridge-project-global.org,Website domain changed
+EV_E003_RENAME,E003,rename,2022-03-21T00:00:00Z,HealthConnect,HealthConnect International,Organization name changed
+EV_E004_DOMAIN,E004,domain_change,2022-09-17T00:00:00Z,smartcity-initiative.org,smartcity-initiative-global.org,Website domain changed
+EV_E005_RENAME,E005,rename,2022-03-21T00:00:00Z,OceanGuard,OceanGuard International,Organization name changed
+EV_E006_DOMAIN,E006,domain_change,2022-09-17T00:00:00Z,futureskills.org,futureskills-global.org,Website domain changed
+EV_E008_RENAME,E008,rename,2022-03-21T00:00:00Z,SolarNext,SolarNext International,Organization name changed
+EV_E009_DOMAIN,E009,domain_change,2022-09-17T00:00:00Z,saferoad-project.org,saferoad-project-global.org,Website domain changed

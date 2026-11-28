@@ -1,0 +1,13 @@
+﻿quality_label_id,artifact_id,metadata_field,quality_issue,ground_truth,notes
+MQ_E001,E001_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E002,E002_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E003,E003_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E004,E004_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E005,E005_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E006,E006_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E007,E007_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E008,E008_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E009,E009_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E010,E010_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E011,E011_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.
+MQ_E012,E012_S07,capture_time,missing_timestamp,TRUE,Capture timestamp is intentionally missing.

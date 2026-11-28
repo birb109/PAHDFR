@@ -1,0 +1,4 @@
+﻿match_id,artifact_id_1,artifact_id_2,same_entity,match_type,notes
+MATCH_001,E003_S15,E007_S15,FALSE,ambiguous,Different entities with potentially similar context
+MATCH_002,E007_S15,E010_S15,FALSE,ambiguous,Different entities with potentially similar context
+MATCH_003,E010_S15,E012_S15,FALSE,ambiguous,Different entities with potentially similar context

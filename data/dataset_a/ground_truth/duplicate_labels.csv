@@ -1,0 +1,3 @@
+﻿duplicate_id,artifact_id_1,artifact_id_2,is_duplicate,duplicate_type,notes
+DUP_E011_S10,E011_S09,E011_S10,TRUE,exact,Identical HTML content
+DUP_E012_S10,E012_S09,E012_S10,TRUE,exact,Identical HTML content
