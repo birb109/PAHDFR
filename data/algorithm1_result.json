@@ -1,0 +1,22 @@
+{
+    "algorithm": "Algorithm 1: Historical Artifact Discovery and Collection",
+    "target_url": "https://www.wikipedia.org",
+    "started_at": "2026-11-24T06:00:36.482223+00:00",
+    "finished_at": "2026-11-24T06:00:43.859160+00:00",
+    "discovered_count": 0,
+    "collected_count": 0,
+    "failed_count": 1,
+    "discovery_error_count": 1,
+    "retrieval_error_count": 0,
+    "storage_error_count": 0,
+    "artifacts": [],
+    "errors": [
+        {
+            "source": "wayback",
+            "stage": "discovery",
+            "url": "https://www.wikipedia.org",
+            "message": "429 Client Error: Too Many Requests for url: https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.wikipedia.org&output=json&fl=timestamp%2Coriginal%2Cstatuscode%2Cmimetype%2Cdigest&filter=statuscode%3A200&collapse=digest&from=20060907&to=20260907",
+            "timestamp": "2026-11-24T06:00:43.844771+00:00"
+        }
+    ]
+}
